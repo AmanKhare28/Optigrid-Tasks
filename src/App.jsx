@@ -10,7 +10,14 @@ import {
   Alert,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  TouchSensor,
+  MouseSensor,
+} from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import SortableTask from "./components/SortableTask";
 
@@ -30,6 +37,11 @@ function App() {
   const [newTask, setNewTask] = useState("");
   const [alert, setAlert] = useState({ open: false, message: "" });
   const [user, setUser] = useState(null);
+
+  const mouseSensor = useSensor(MouseSensor);
+  const touchSensor = useSensor(TouchSensor);
+
+  const sensors = useSensors(mouseSensor, touchSensor);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -176,7 +188,11 @@ function App() {
         </Box>
       </Modal>
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+      >
         <div className="mt-6">
           {tasks.map((task) => (
             <SortableTask
