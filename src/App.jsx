@@ -84,7 +84,7 @@ function App() {
       ...doc.data(),
     }));
     setTasks(loaded);
-    setCompletedTasks([]); // Clear completed on reload
+    setCompletedTasks([]);
   };
 
   const handleAddTask = async () => {
@@ -130,11 +130,9 @@ function App() {
     const overId = over.id;
 
     if (overId === "completed") {
-      handleCompleteTask(activeId); // Move to completed
+      handleCompleteTask(activeId);
     } else if (overId === "incomplete") {
-      // Optional: If restoring is supported later
     } else {
-      // Reorder within same list
       const oldIndex = tasks.findIndex((task) => task.id === activeId);
       const newIndex = tasks.findIndex((task) => task.id === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
@@ -173,7 +171,6 @@ function App() {
         )}
       </div>
 
-      {/* Modal */}
       <Modal open={open} onClose={handleClose}>
         <Box
           sx={{
@@ -211,7 +208,6 @@ function App() {
         sensors={sensors}
       >
         <div className="flex flex-col md:flex-row gap-4 mt-6">
-          {/* Incomplete Tasks */}
           <DroppableColumn id="incomplete">
             {tasks.map((task) => (
               <SortableTask
@@ -224,7 +220,6 @@ function App() {
             ))}
           </DroppableColumn>
 
-          {/* Completed Tasks */}
           <DroppableColumn id="completed">
             {completedTasks.map((task) => (
               <Task
@@ -240,7 +235,6 @@ function App() {
         </div>
       </DndContext>
 
-      {/* Alert */}
       <Snackbar
         open={alert.open}
         autoHideDuration={3000}
