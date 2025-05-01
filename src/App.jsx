@@ -17,9 +17,12 @@ import {
   useSensors,
   TouchSensor,
   MouseSensor,
+  useDroppable,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import SortableTask from "./components/SortableTask";
+import Task from "./components/task";
+import DroppableColumn from "./components/DroppableColumns";
 
 import { auth, provider, db } from "../firebase";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -33,6 +36,7 @@ import {
 
 function App() {
   const [tasks, setTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [open, setOpen] = useState(false);
   const [newTask, setNewTask] = useState("");
   const [alert, setAlert] = useState({ open: false, message: "" });
@@ -40,7 +44,6 @@ function App() {
 
   const mouseSensor = useSensor(MouseSensor);
   const touchSensor = useSensor(TouchSensor);
-
   const sensors = useSensors(mouseSensor, touchSensor);
 
   useEffect(() => {
@@ -65,6 +68,7 @@ function App() {
     signOut(auth);
     setUser(null);
     setTasks([]);
+    setCompletedTasks([]);
   };
 
   const handleOpen = () => setOpen(true);
@@ -80,6 +84,7 @@ function App() {
       ...doc.data(),
     }));
     setTasks(loaded);
+    setCompletedTasks([]); // Clear completed on reload
   };
 
   const handleAddTask = async () => {
@@ -98,15 +103,20 @@ function App() {
     if (user) {
       await deleteDoc(doc(db, "users", user.uid, "tasks", id));
       setTasks((prev) => prev.filter((task) => task.id !== id));
+      setCompletedTasks((prev) => prev.filter((task) => task.id !== id));
       setAlert({ open: true, message: "Task deleted" });
     }
   };
 
   const handleCompleteTask = async (id) => {
     if (user) {
-      await deleteDoc(doc(db, "users", user.uid, "tasks", id));
-      setTasks((prev) => prev.filter((task) => task.id !== id));
-      setAlert({ open: true, message: "Task completed" });
+      const completedTask = tasks.find((task) => task.id === id);
+      if (completedTask) {
+        await deleteDoc(doc(db, "users", user.uid, "tasks", id));
+        setTasks((prev) => prev.filter((task) => task.id !== id));
+        setCompletedTasks((prev) => [...prev, completedTask]);
+        setAlert({ open: true, message: "Task completed" });
+      }
     }
   };
 
@@ -114,18 +124,29 @@ function App() {
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    if (active.id !== over.id) {
-      const oldIndex = tasks.findIndex((task) => task.id === active.id);
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (overId === "completed") {
+      handleCompleteTask(activeId); // Move to completed
+    } else if (overId === "incomplete") {
+      // Optional: If restoring is supported later
+    } else {
+      // Reorder within same list
+      const oldIndex = tasks.findIndex((task) => task.id === activeId);
       const newIndex = tasks.findIndex((task) => task.id === over.id);
-      setTasks(arrayMove(tasks, oldIndex, newIndex));
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setTasks(arrayMove(tasks, oldIndex, newIndex));
+      }
     }
   };
 
   return (
-    <div className="white mt-3">
+    <div className="white mt-3 px-4">
       <div className="flex justify-between items-center">
         <img src="/logo.svg" alt="Logo" className="w-24 sm:w-32" />
-
         {user ? (
           <div className="flex gap-3 items-center">
             <span className="text-sm">{user.displayName}</span>
@@ -152,12 +173,8 @@ function App() {
         )}
       </div>
 
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="add-task-modal-title"
-        aria-describedby="add-task-modal-description"
-      >
+      {/* Modal */}
+      <Modal open={open} onClose={handleClose}>
         <Box
           sx={{
             position: "absolute",
@@ -171,7 +188,7 @@ function App() {
             borderRadius: 2,
           }}
         >
-          <Typography id="add-task-modal-title" variant="h6" component="h2">
+          <Typography variant="h6" component="h2">
             Add New Task
           </Typography>
           <TextField
@@ -193,19 +210,37 @@ function App() {
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
-        <div className="mt-6">
-          {tasks.map((task) => (
-            <SortableTask
-              key={task.id}
-              id={task.id}
-              title={task.title}
-              onDelete={handleDeleteTask}
-              onComplete={handleCompleteTask}
-            />
-          ))}
+        <div className="flex flex-col md:flex-row gap-4 mt-6">
+          {/* Incomplete Tasks */}
+          <DroppableColumn id="incomplete">
+            {tasks.map((task) => (
+              <SortableTask
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                onDelete={handleDeleteTask}
+                onComplete={handleCompleteTask}
+              />
+            ))}
+          </DroppableColumn>
+
+          {/* Completed Tasks */}
+          <DroppableColumn id="completed">
+            {completedTasks.map((task) => (
+              <Task
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                onDelete={handleDeleteTask}
+                onComplete={() => {}}
+                isCompleted={true}
+              />
+            ))}
+          </DroppableColumn>
         </div>
       </DndContext>
 
+      {/* Alert */}
       <Snackbar
         open={alert.open}
         autoHideDuration={3000}

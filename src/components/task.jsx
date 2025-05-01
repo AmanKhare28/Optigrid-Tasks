@@ -1,7 +1,7 @@
 import { Checkbox, FormControlLabel, Tooltip } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const Task = ({ id, title, onDelete, onComplete }) => {
+const Task = ({ id, title, onDelete, onComplete, isCompleted = false }) => {
   return (
     <div className="flex items-center w-full justify-between hover:bg-blue-100 rounded-xl px-6 py-3 cursor-crosshair">
       <div className="flex items-center">
@@ -10,6 +10,8 @@ const Task = ({ id, title, onDelete, onComplete }) => {
             <Checkbox
               size="medium"
               color="primary"
+              checked={isCompleted}
+              disabled={isCompleted}
               onChange={() => onComplete(id)}
             />
           }
